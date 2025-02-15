@@ -32,8 +32,8 @@ day_map = {
 }
 
 
-dayToEnroll = ""
-timeToEnroll = ""
+dayToEnroll = "Monday"
+timeToEnroll = "12:00 - 13:15"
 
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 times = []
@@ -69,10 +69,10 @@ def enroll_course():
     studio_link.click()
     logging.info("Clicked 'Meine Studios'")
 
-    href_link0 = wait.until(
+    href_link = wait.until(
         EC.element_to_be_clickable((By.XPATH, "//a[@href='https://www.sportsnow.ch/go/natthapong-gym?locale=de']"))
     )
-    href_link0.click()
+    href_link.click()
 
     logging.info("Clicked Anschauen")
 
@@ -129,17 +129,34 @@ def enroll_course():
             logging.error(f"Error {e} occured")
             break
 
-    print(classMap)
+    # print(classMap)
     print("Times found:", times)
 
-    
     classToGoTo = classMap.get((dayToEnroll,timeToEnroll))
+    print(classToGoTo)
 
-    link = driver.find_element(By.XPATH, f"//a[@href='{classToGoTo}']")
-    link.click
-    #continue from here once the website is available again
+    driver.get(classToGoTo)
+    
+    
+    driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
 
-    time.sleep(10)
+    driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary btn-sm btn-block') and not(contains(text(), 'Anmeldung Geschlossen'))]").get_attribute("href"))
+
+    driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary') and not(@data-confirm)]").get_attribute("href"))
+
+
+    verbindlich_buchen = wait.until(
+        EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'btn btn-primary')]"))
+    )
+
+    driver.execute_script("arguments[0].scrollIntoView();", verbindlich_buchen)
+
+    verbindlich_buchen.click()
+
+    time.sleep(3)
+
+    logging.info("clicked button")
+
 
 if __name__ == "__main__":
     main()
