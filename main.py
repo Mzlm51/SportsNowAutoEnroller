@@ -60,29 +60,24 @@ def enroll_course():
     login_button.click()
     logging.info("finished login in")
 
-    studio_link = wait.until(
+    wait.until(
         EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Meine Studios')]"))
-    )
-    
-    
-    # Click the link
-    studio_link.click()
+    ).click()
+
     logging.info("Clicked 'Meine Studios'")
 
-    href_link = wait.until(
+    wait.until(
         EC.element_to_be_clickable((By.XPATH, "//a[@href='https://www.sportsnow.ch/go/natthapong-gym?locale=de']"))
-    )
-    href_link.click()
+    ).click()
 
     logging.info("Clicked Anschauen")
 
-    href_stundenplan = wait.until(
+    wait.until(
         EC.element_to_be_clickable((By.XPATH,"//a[text()='Stundenplan']"))
-    )
-    href_stundenplan.click()
+    ).click()
+    
     logging.info("Clicked Stundenplan")
     
-
 
     # start by scraping the data and creating the time table of the classes
     classes = driver.find_elements(By.XPATH, "//div[contains(@class, 'col-xs-1 cal-entry-col') and contains(@class, 'cal-col-')]/div[contains(@class, 'cal-entry') and not(contains(.,'Probetraining'))]")
@@ -130,13 +125,13 @@ def enroll_course():
             break
 
     # print(classMap)
-    print("Times found:", times)
+    # print("Times found:", times)
 
     classToGoTo = classMap.get((dayToEnroll,timeToEnroll))
-    print(classToGoTo)
+    # print(classToGoTo)
+    logging.info("Got the class")
 
     driver.get(classToGoTo)
-    
     
     driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
 
@@ -153,9 +148,7 @@ def enroll_course():
 
     verbindlich_buchen.click()
 
-    time.sleep(3)
-
-    logging.info("clicked button")
+    logging.info("Enrolled into the Course!")
 
 
 if __name__ == "__main__":
