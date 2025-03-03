@@ -15,11 +15,8 @@ load_dotenv()
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 
-logging.basicConfig(level=logging.INFO, format= '%(asctime)s - %(levelname)s - %(message)s')
 
-service = Service(executable_path="./chromedriver.exe")
-driver = webdriver.Chrome(service=service)
-wait = WebDriverWait(driver, 10)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 day_map = {
     1: "Monday", 8: "Monday", 15: "Monday",
@@ -31,34 +28,37 @@ day_map = {
     7: "Sunday", 14: "Sunday", 21: "Sunday"
 }
 
+# implement flags later when working with database
+enroll = False # flag set if script should enroll
+scrape = True # flag set if script should scrape
 
-dayToEnroll = "Monday"
-timeToEnroll = "12:00 - 13:15"
+dayToEnroll = "Tuesday"
+timeToEnroll = "20:15 - 21:30"
 
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 times = []
 
-def main():
-    try:
-        driver.maximize_window()
-        driver.get("https://www.sportsnow.ch/users/sign_in")  
-        enroll_course()
-    except Exception as e:
-        logging.error  (f"An error occurred: {e}")    
-    finally:
-        driver.quit()
+def init():
+    service = Service(executable_path="./chromedriver.exe")
+    driver = webdriver.Chrome(service=service)
+    wait = WebDriverWait(driver, 10)
+    driver.maximize_window()
+    return wait, driver
 
-def enroll_course():
-
+def login(driver, wait, email, password):
+    logging.info("Logging in...")
     input_mail = driver.find_element(By.NAME, "user[email]")
     input_password = driver.find_element(By.NAME, "user[password]")
 
-    input_mail.send_keys(EMAIL)
-    input_password.send_keys(PASSWORD)
+    input_mail.send_keys(email)
+    input_password.send_keys(password)
 
     login_button = driver.find_element(By.NAME, "commit")
     login_button.click()
-    logging.info("finished login in")
+    logging.info("Finished logging in")
+
+def scrapeWebsite(driver, wait):
+    logging.info("Scraping website...")
 
     wait.until(
         EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Meine Studios')]"))
@@ -73,16 +73,15 @@ def enroll_course():
     logging.info("Clicked Anschauen")
 
     wait.until(
-        EC.element_to_be_clickable((By.XPATH,"//a[text()='Stundenplan']"))
+        EC.element_to_be_clickable((By.XPATH, "//a[text()='Stundenplan']"))
     ).click()
-    
+
     logging.info("Clicked Stundenplan")
-    
 
     # start by scraping the data and creating the time table of the classes
     classes = driver.find_elements(By.XPATH, "//div[contains(@class, 'col-xs-1 cal-entry-col') and contains(@class, 'cal-col-')]/div[contains(@class, 'cal-entry') and not(contains(.,'Probetraining'))]")
 
-    # block : [day, time, href]
+    # block : [day, time, name, href]
     classMap = {}
 
     maxRetries = 3
@@ -94,62 +93,85 @@ def enroll_course():
                 By.XPATH, "//div[contains(@class, 'col-xs-1 cal-entry-col') and contains(@class, 'cal-col-')]/div[contains(@class, 'cal-entry') and not(contains(.,'Probetraining'))]")
 
             for block in classes:
-                    # get day
-                    parent_class = block.find_element(By.XPATH, "..").get_attribute("class")
-                    numbers = re.findall('\d+', parent_class)
-                    number = int(numbers[1])
-                    day = day_map[number]
+                # get day
+                parent_class = block.find_element(By.XPATH, "..").get_attribute("class")
+                numbers = re.findall(r'\d+', parent_class)
+                number = int(numbers[1])
+                day = day_map[number]
 
-                    # get time
-                    time_element = block.find_element(By.XPATH, ".//p[.//i[contains(@class, 'fa-clock-o')]]")
-                    time_text = time_element.text.strip()
-                    if time_text not in times:
-                        times.append(time_text)
+                # get time
+                time_element = block.find_element(By.XPATH, ".//p[.//i[contains(@class, 'fa-clock-o')]]")
+                time_text = time_element.text.strip()
+                if time_text not in times:
+                    times.append(time_text)
 
+                # get name
+                class_name_element = block.find_element(By.XPATH, ".//h4/a/span")
+                class_name = class_name_element.text.strip()
 
-                    # get href
-                    href = block.find_element(By.XPATH, ".//a").get_attribute("href")
-                    classMap[(day,time_text)] = href
+                # get href
+                href = block.find_element(By.XPATH, ".//a").get_attribute("href")
+                classMap[(day, time_text, class_name)] = href
 
-
-            break # break out of while loop if successful
-
+            break  # break out of while loop if successful
 
         except StaleElementReferenceException:
-            logging.warning("Retrying")
-            driver.refresh
+            logging.warning("Retrying...")
+            driver.refresh()
             time.sleep(3)
             retryCount += 1
         except Exception as e:
-            logging.error(f"Error {e} occured")
+            logging.error(f"Error {e} occurred")
             break
 
-    # print(classMap)
-    # print("Times found:", times)
+    logging.info(f"Classes found: {classMap}")
+    return classMap
 
-    classToGoTo = classMap.get((dayToEnroll,timeToEnroll))
-    # print(classToGoTo)
-    logging.info("Got the class")
+def enrollment(driver, wait, classMap):
+    logging.info("Enrolling in the course...")
 
-    driver.get(classToGoTo)
-    
-    driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
+    classToGoTo = classMap.get((dayToEnroll, timeToEnroll))
+    logging.info(f"Class to enroll: {classToGoTo}")
 
-    driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary btn-sm btn-block') and not(contains(text(), 'Anmeldung Geschlossen'))]").get_attribute("href"))
+    if classToGoTo:
+        driver.get(classToGoTo)
 
-    driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary') and not(@data-confirm)]").get_attribute("href"))
+        driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
 
+        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary btn-sm btn-block') and not(contains(text(), 'Anmeldung Geschlossen'))]").get_attribute("href"))
 
-    verbindlich_buchen = wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'btn btn-primary')]"))
-    )
+        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary') and not(@data-confirm)]").get_attribute("href"))
 
-    driver.execute_script("arguments[0].scrollIntoView();", verbindlich_buchen)
+        verbindlich_buchen = wait.until(
+            EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'btn btn-primary')]"))
+        )
 
-    verbindlich_buchen.click()
+        driver.execute_script("arguments[0].scrollIntoView();", verbindlich_buchen)
 
-    logging.info("Enrolled into the Course!")
+        verbindlich_buchen.click()
 
+        logging.info("Enrolled in the course!")
+
+def main():
+    wait, driver = init()
+
+    try:
+        driver.get("https://www.sportsnow.ch/users/sign_in")  
+        login(driver, wait, EMAIL, PASSWORD)
+        if scrape and not enroll:
+            classMap = scrapeWebsite(driver, wait)
+        elif enroll and not scrape:
+            classMap = {}
+            enrollment(driver, wait, classMap)
+        elif scrape and enroll:
+            classMap = scrapeWebsite(driver, wait)
+            enrollment(driver, wait, classMap)
+        else:
+            logging.info("Didn't scrape nor enroll")
+    except Exception as e:
+        logging.error(f"An error occurred: {e}")
+    finally:
+        driver.quit()
 
 if __name__ == "__main__":
     main()
