@@ -9,12 +9,20 @@ import os
 import time
 import logging
 import re
+import datetime
+
+from supabase import create_client, Client
+
 
 load_dotenv()
 
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
 
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -106,12 +114,12 @@ def scrapeWebsite(driver, wait):
                     times.append(time_text)
 
                 # get name
-                class_name_element = block.find_element(By.XPATH, ".//h4/a/span")
-                class_name = class_name_element.text.strip()
+                class_title_element = block.find_element(By.XPATH, ".//h4/a/span")
+                class_title = class_title_element.text.strip()
 
                 # get href
                 href = block.find_element(By.XPATH, ".//a").get_attribute("href")
-                classMap[(day, time_text, class_name)] = href
+                classMap[(day, time_text, class_title)] = href
 
             break  # break out of while loop if successful
 
@@ -152,6 +160,22 @@ def enrollment(driver, wait, classMap):
 
         logging.info("Enrolled in the course!")
 
+# block : [day, time, name, href]
+def save_classes_to_db(classMap):
+    for(day, time, name), href in classMap.items():
+        data = {"href": href,
+                "day": day, 
+                "time": time, 
+                "class_title": name, 
+                "scraped_at": datetime.datetime.now()
+        }
+
+        response = (
+            supabase.table("Muay Thai Classes")
+            .select(data).
+            execute()
+        )
+
 def main():
     wait, driver = init()
 
@@ -160,11 +184,13 @@ def main():
         login(driver, wait, EMAIL, PASSWORD)
         if scrape and not enroll:
             classMap = scrapeWebsite(driver, wait)
+            save_classes_to_db(classMap)
         elif enroll and not scrape:
             classMap = {}
             enrollment(driver, wait, classMap)
         elif scrape and enroll:
             classMap = scrapeWebsite(driver, wait)
+            save_classes_to_db(classMap)
             enrollment(driver, wait, classMap)
         else:
             logging.info("Didn't scrape nor enroll")
