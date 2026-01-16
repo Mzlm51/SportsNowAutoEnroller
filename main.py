@@ -10,6 +10,7 @@ import time
 import logging
 import re
 import datetime
+import json
 
 from supabase import create_client, Client
 
@@ -40,15 +41,14 @@ day_map = {
 enroll = False # flag set if script should enroll
 scrape = True # flag set if script should scrape
 
-dayToEnroll = "Tuesday"
+dayToEnroll = "Friday"
 timeToEnroll = "20:15 - 21:30"
 
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 times = []
 
 def init():
-    service = Service(executable_path="./chromedriver.exe")
-    driver = webdriver.Chrome(service=service)
+    driver = webdriver.Chrome()
     wait = WebDriverWait(driver, 10)
     driver.maximize_window()
     return wait, driver
@@ -133,12 +133,23 @@ def scrapeWebsite(driver, wait):
             break
 
     logging.info(f"Classes found: {classMap}")
+    print(classMap)
     return classMap
 
 def enrollment(driver, wait, classMap):
     logging.info("Enrolling in the course...")
 
-    classToGoTo = classMap.get((dayToEnroll, timeToEnroll))
+    classToGoTo = None
+    for (day, time, name), href in classMap.items():
+        if day == dayToEnroll and time == timeToEnroll:
+            classToGoTo = href
+            class_name_to_enroll = name
+            break
+
+    if not classToGoTo:
+        logging.error(f"No class found for {dayToEnroll} at {timeToEnroll}")
+        return
+    
     logging.info(f"Class to enroll: {classToGoTo}")
 
     if classToGoTo:
@@ -161,20 +172,40 @@ def enrollment(driver, wait, classMap):
         logging.info("Enrolled in the course!")
 
 # block : [day, time, name, href]
-def save_classes_to_db(classMap):
-    for(day, time, name), href in classMap.items():
-        data = {"href": href,
-                "day": day, 
-                "time": time, 
-                "class_title": name, 
-                "scraped_at": datetime.datetime.now()
-        }
+def save_to_json(classMap):
+    output = []
 
-        response = (
-            supabase.table("Muay Thai Classes")
-            .select(data).
-            execute()
+    today = datetime.date.today()
+
+    for (day, time_range, title), href in classMap.items():
+        start_time, end_time = time_range.split(" - ")
+
+        # find next date for this weekday
+        weekday_index = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"].index(day)
+        days_ahead = (weekday_index - today.weekday()) % 7
+        class_date = today + datetime.timedelta(days=days_ahead)
+
+        start_dt = datetime.datetime.strptime(
+            f"{class_date} {start_time}", "%Y-%m-%d %H:%M"
         )
+        end_dt = datetime.datetime.strptime(
+            f"{class_date} {end_time}", "%Y-%m-%d %H:%M"
+        )
+
+        output.append({
+            "class_title": title,
+            "start": start_dt.isoformat(),
+            "end": end_dt.isoformat(),
+            "href": href,
+            "day": day
+        })
+
+    with open("classes.json", "w") as f:
+        json.dump(output, f, indent=2)
+
+    logging.info("Saved classes to classes.json")
+
+
 
 def main():
     wait, driver = init()
@@ -184,13 +215,13 @@ def main():
         login(driver, wait, EMAIL, PASSWORD)
         if scrape and not enroll:
             classMap = scrapeWebsite(driver, wait)
-            save_classes_to_db(classMap)
+            save_to_json(classMap)
         elif enroll and not scrape:
             classMap = {}
             enrollment(driver, wait, classMap)
         elif scrape and enroll:
             classMap = scrapeWebsite(driver, wait)
-            save_classes_to_db(classMap)
+            save_to_json(classMap)
             enrollment(driver, wait, classMap)
         else:
             logging.info("Didn't scrape nor enroll")
