@@ -206,7 +206,6 @@ def save_to_json(classMap):
     logging.info("Saved classes to classes.json")
 
 
-
 def main():
     wait, driver = init()
 
