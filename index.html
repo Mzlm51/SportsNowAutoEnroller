@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Muay Thai Classes</title>
+
+<link
+  href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css"
+  rel="stylesheet"
+/>
+<div style="text-align:center; margin-bottom:20px;">
+  <label>
+    <input type="checkbox" id="schedulerToggle" /> Enable auto-enrollment
+  </label>
+</div>
+<div id="calendar"></div>
+<style>
+  body { margin: 0; padding: 0; font-family: Arial, sans-serif; }
+  #calendar { max-width: 1100px; margin: 40px auto; }
+</style>
+</head>
+<body>
+
+<div id="calendar"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+
+<script>
+async function loadClasses() {
+  const res = await fetch("/classes");
+  const classes = await res.json();
+
+  const resEnroll = await fetch("/enroll_requests");
+  const enrollments = await resEnroll.json();
+
+  return classes.map(cls => {
+    const isEnrolled = enrollments.some(
+      e => e.day === cls.day && e.href === cls.href
+    );
+
+    return {
+      title: cls.class_title,
+      start: cls.start,
+      end: cls.end,
+      extendedProps: {
+        href: cls.href,
+        day: cls.day
+      },
+      backgroundColor: isEnrolled ? "green" : ""
+    };
+  });
+}
+
+
+document.addEventListener("DOMContentLoaded", async function () {
+  const events = await loadClasses();
+
+  const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+    initialView: "timeGridWeek",
+    timeZone: "local",
+    locale: "de",
+
+    slotLabelFormat: { hour: "2-digit", minute: "2-digit", hour12: false },
+    eventTimeFormat: { hour: "2-digit", minute: "2-digit", hour12: false },
+
+    events: events,
+
+    eventClick: function(info) {
+      info.jsEvent.preventDefault();
+
+      const isEnrolled = info.event.backgroundColor === "green";
+
+      if (isEnrolled) {
+        if (!confirm(`Unenroll from "${info.event.title}"?`)) return;
+
+        fetch("/enroll_requests", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: info.event.title,
+            day: info.event.extendedProps.day
+          })
+        }).then(async res => {
+          if (!res.ok) {
+            alert("Error removing enrollment");
+            return;
+          }
+          info.event.setProp("backgroundColor", "");
+          alert("Enrollment removed!");
+        }).catch(err => {
+          console.error(err);
+          alert("Unexpected error");
+        });
+
+      } else {
+        if (!confirm(`Enroll in "${info.event.title}"?`)) return;
+
+        fetch("/enroll_requests", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: info.event.title,
+            start: info.event.start.toISOString(),
+            href: info.event.extendedProps.href,
+            day: info.event.extendedProps.day
+          })
+        }).then(async res => {
+          if (!res.ok) {
+            const errorData = await res.json();
+            alert(errorData.message);
+            return;
+          }
+          info.event.setProp("backgroundColor", "green");
+          alert("Enrollment scheduled!");
+        }).catch(err => {
+          console.error(err);
+          alert("Unexpected error");
+        });
+      }
+    }
+  });
+
+  calendar.render();
+});
+</script>
+
+<script>
+const toggle = document.getElementById("schedulerToggle");
+
+fetch("/scheduler_status")
+  .then(res => res.json())
+  .then(data => {
+    toggle.checked = data.enabled;
+  });
+
+toggle.addEventListener("change", () => {
+  fetch("/scheduler_status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ enabled: toggle.checked })
+  });
+});
+</script>
+
+
+</body>
+</html>

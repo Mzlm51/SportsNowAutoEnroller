@@ -12,18 +12,10 @@ import re
 import datetime
 import json
 
-from supabase import create_client, Client
-
-
 load_dotenv()
 
 EMAIL = os.getenv("EMAIL")
 PASSWORD = os.getenv("PASSWORD")
-
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -36,13 +28,6 @@ day_map = {
     6: "Saturday", 13: "Saturday", 20: "Saturday",
     7: "Sunday", 14: "Sunday", 21: "Sunday"
 }
-
-# implement flags later when working with database
-enroll = False # flag set if script should enroll
-scrape = True # flag set if script should scrape
-
-dayToEnroll = "Friday"
-timeToEnroll = "20:15 - 21:30"
 
 days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 times = []
@@ -89,7 +74,6 @@ def scrapeWebsite(driver, wait):
     # start by scraping the data and creating the time table of the classes
     classes = driver.find_elements(By.XPATH, "//div[contains(@class, 'col-xs-1 cal-entry-col') and contains(@class, 'cal-col-')]/div[contains(@class, 'cal-entry') and not(contains(.,'Probetraining'))]")
 
-    # block : [day, time, name, href]
     classMap = {}
 
     maxRetries = 3
@@ -136,41 +120,6 @@ def scrapeWebsite(driver, wait):
     print(classMap)
     return classMap
 
-def enrollment(driver, wait, classMap):
-    logging.info("Enrolling in the course...")
-
-    classToGoTo = None
-    for (day, time, name), href in classMap.items():
-        if day == dayToEnroll and time == timeToEnroll:
-            classToGoTo = href
-            class_name_to_enroll = name
-            break
-
-    if not classToGoTo:
-        logging.error(f"No class found for {dayToEnroll} at {timeToEnroll}")
-        return
-    
-    logging.info(f"Class to enroll: {classToGoTo}")
-
-    if classToGoTo:
-        driver.get(classToGoTo)
-
-        driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
-
-        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary btn-sm btn-block') and not(contains(text(), 'Anmeldung Geschlossen'))]").get_attribute("href"))
-
-        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary') and not(@data-confirm)]").get_attribute("href"))
-
-        verbindlich_buchen = wait.until(
-            EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'btn btn-primary')]"))
-        )
-
-        driver.execute_script("arguments[0].scrollIntoView();", verbindlich_buchen)
-
-        verbindlich_buchen.click()
-
-        logging.info("Enrolled in the course!")
-
 # block : [day, time, name, href]
 def save_to_json(classMap):
     output = []
@@ -205,25 +154,15 @@ def save_to_json(classMap):
 
     logging.info("Saved classes to classes.json")
 
-
 def main():
     wait, driver = init()
 
     try:
         driver.get("https://www.sportsnow.ch/users/sign_in")  
         login(driver, wait, EMAIL, PASSWORD)
-        if scrape and not enroll:
-            classMap = scrapeWebsite(driver, wait)
-            save_to_json(classMap)
-        elif enroll and not scrape:
-            classMap = {}
-            enrollment(driver, wait, classMap)
-        elif scrape and enroll:
-            classMap = scrapeWebsite(driver, wait)
-            save_to_json(classMap)
-            enrollment(driver, wait, classMap)
-        else:
-            logging.info("Didn't scrape nor enroll")
+        classMap = scrapeWebsite(driver, wait)
+        save_to_json(classMap)
+        logging.info("Finished scraping the website")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
     finally:
