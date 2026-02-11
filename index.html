@@ -12,6 +12,9 @@
   <label>
     <input type="checkbox" id="schedulerToggle" /> Enable auto-enrollment
   </label>
+  <label>
+    <input type="checkbox" id="scraperToggle" /> Enable auto-scraping
+  </label>
 </div>
 <div id="calendar"></div>
 <style>
@@ -126,18 +129,39 @@ document.addEventListener("DOMContentLoaded", async function () {
 
 <script>
 const toggle = document.getElementById("schedulerToggle");
+const scraperToggle = document.getElementById("scraperToggle");
 
 fetch("/scheduler_status")
   .then(res => res.json())
   .then(data => {
     toggle.checked = data.enabled;
+    scraperToggle.checked = data.autoscrape_enabled;
   });
-
+/*
+  function updateToggles() {
+  fetch("/scheduler_status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      schedulerEnabled: schedulerToggle.checked,
+      scraperEnabled: scraperToggle.checked
+    })
+  });
+}
+*/
 toggle.addEventListener("change", () => {
   fetch("/scheduler_status", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ enabled: toggle.checked })
+  });
+});
+
+scraperToggle.addEventListener("change", () => {
+  fetch("/scheduler_status", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ autoscrape_enabled: scraperToggle.checked })
   });
 });
 </script>
