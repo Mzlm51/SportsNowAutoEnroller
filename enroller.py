@@ -39,11 +39,36 @@ def enroll_class(href):
         logging.info(f"Enrolling into {href}")
         driver.get(href)
 
-        driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
+        #driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
+        driver.get(driver.find_element(By.XPATH, "//a[contains(text(), 'Jetzt buchen')]").get_attribute("href"))
+        logging.info("section 1 complete")
 
-        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary btn-sm btn-block') and not(contains(text(), 'Anmeldung Geschlossen'))]").get_attribute("href"))
+        # Wait for page to load, then check state before navigating
+        wait.until(EC.presence_of_element_located((By.XPATH, "//td[contains(@class, 'footable-last-column')]")))
 
-        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn btn-primary') and not(@data-confirm)]").get_attribute("href"))
+        # Check if already booked
+        already_booked = driver.find_elements(By.XPATH, "//button[contains(@class, 'btn-primary') and contains(text(), 'Bereits gebucht')]")
+        if already_booked:
+            logging.info("Already booked — skipping.")
+            return
+
+        # Check if full (waitlist available)
+        waitlist = driver.find_elements(By.XPATH, "//a[contains(@class, 'add-to-waiting-list')]")
+        if waitlist:
+            driver.get(waitlist[0].get_attribute("href"))
+            logging.info("Class full — added to waitlist.")
+            return
+
+        driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn-sm') and contains(@class, 'btn-primary') and contains(@class, 'btn-block')]").get_attribute("href"))
+        logging.info("section 2 complete")
+
+        auswaehlen = wait.until(
+            EC.presence_of_element_located((By.XPATH,
+                "//a[contains(@class, 'btn-primary') and contains(text(), 'Auswählen') and not(@data-confirm)]"
+            ))
+        )
+        driver.get(auswaehlen.get_attribute("href"))
+        logging.info("section 3 complete")
 
         verbindlich_buchen = wait.until(
             EC.element_to_be_clickable((By.XPATH, "//button[contains(@class, 'btn btn-primary')]"))

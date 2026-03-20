@@ -7,6 +7,11 @@ ENROLL_FILE = "enroll_requests.json"
 CHECK_INTERVAL = 5  # every minute
 HOURS_AHEAD = 48
 
+SCRAPE_HOUR = 18 # when to scrape new batch of classes
+SCRAPE_MINUTE = 42
+last_scrape_date = None
+
+
 def scheduler_enabled():
     try:
         with open("scheduler_status.json") as f:
@@ -34,16 +39,41 @@ def get_requests_to_enroll():
             to_enroll.append(r)
     return to_enroll
 
+def should_run_daily_scrape():
+    global last_scrape_date
+    now = datetime.datetime.now()
+
+    if (
+        now.hour == SCRAPE_HOUR and
+        now.minute == SCRAPE_MINUTE and
+        last_scrape_date != now.date()
+    ):
+            last_scrape_date = now.date()
+            return True
+
+    return False
+
 
 def main():
+    global last_scrape_date
+
     while True:
+        now = datetime.datetime.now()
+
+        if should_run_daily_scrape():
+            logging.info("Initializing webscrape")
+            try:
+                subprocess.run([sys.executable, "main.py"], check=True)
+            except Exception as e:
+                logging.info("Scrape failed")
+
         if scheduler_enabled():
             to_enroll = get_requests_to_enroll()
             if to_enroll:
                 logging.info(f"Found {len(to_enroll)} classes to enroll in")
                 for r in to_enroll:
                     subprocess.run([sys.executable, "enroller.py", r["href"]])
-                    logging.info(f"Enrolled into {r["title"], r["day"]}")
+                    logging.info(f'Enrolled into {r["title"], r["day"]}')
 
                     #remove request from json after enrolling
                     try:
