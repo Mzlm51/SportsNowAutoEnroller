@@ -183,7 +183,7 @@ def sync_enroll_log(driver, wait):
     logging.info("Syncing enroll log with Meine Stunden...")
     try:
         driver.get("https://www.sportsnow.ch/de/bookings")
-        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "footable-even")))
+        wait.until(EC.presence_of_element_located((By.XPATH, "//tr[contains(@class, 'footable')]")))
 
         active_bookings = []
         rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'footable')]")
@@ -207,6 +207,10 @@ def sync_enroll_log(driver, wait):
                 log = json.load(f)
         except (FileNotFoundError, ValueError):
             log = []
+
+        if not active_bookings:
+            logging.info("No bookings found on Meine Stunden, skipping sync")
+            return
 
         synced = []
         for e in log:
