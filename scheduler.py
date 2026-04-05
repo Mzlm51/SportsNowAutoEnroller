@@ -84,8 +84,8 @@ def main():
             if to_enroll:
                 logging.info(f"Found {len(to_enroll)} classes to enroll in")
                 for r in to_enroll:
-                    subprocess.run([sys.executable, "enroller.py", r["href"]])
-                    logging.info(f'Enrolled into {r["title"], r["day"]}')
+                    result = subprocess.run([sys.executable, "enroller.py", r["href"]])
+                    logging.info(f'Enroller exited with code {result.returncode} for {r["title"], r["day"]}')
 
                     try:
                         with open(ENROLL_FILE) as f:
@@ -96,17 +96,20 @@ def main():
                     except Exception as e:
                         logging.error(f"Error updating enroll_requests.json: {e}")
 
-                    try:
+                    if result.returncode == 0:
                         try:
-                            with open("enroll_log.json") as f:
-                                log = json.load(f)
-                        except (FileNotFoundError, ValueError):
-                            log = []
-                        log.append({**r, "enrolled_at": datetime.datetime.now().isoformat()})
-                        with open("enroll_log.json", "w") as f:
-                            json.dump(log, f, indent=2)
-                    except Exception as e:
-                        logging.error(f"Error updating enroll_log.json: {e}")
+                            try:
+                                with open("enroll_log.json") as f:
+                                    log = json.load(f)
+                            except (FileNotFoundError, ValueError):
+                                log = []
+                            log.append({**r, "enrolled_at": datetime.datetime.now().isoformat()})
+                            with open("enroll_log.json", "w") as f:
+                                json.dump(log, f, indent=2)
+                        except Exception as e:
+                            logging.error(f"Error updating enroll_log.json: {e}")
+                    else:
+                        logging.info(f"Skipping enroll_log update for {r['title']} — enroller did not succeed")
             else:
                 logging.info("No classes to enroll in the next 48 hours")
         else:
