@@ -192,12 +192,12 @@ def sync_enroll_log(driver, wait):
                 if len(cells) < 4:
                     continue
                 date_text = cells[1].text.strip()
-                title_text = cells[3].text.strip()
-                if date_text and title_text:
+                row_text = " ".join(c.text for c in cells)
+                if date_text:
                     date_parts = date_text.split(".")
                     if len(date_parts) == 3:
                         iso_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"
-                        active_bookings.append({"title": title_text, "date": iso_date})
+                        active_bookings.append({"date": iso_date, "cancelled": "abgesagt" in row_text.lower()})
             except Exception:
                 continue
 
@@ -207,10 +207,12 @@ def sync_enroll_log(driver, wait):
         except (FileNotFoundError, ValueError):
             log = []
 
-        synced = [e for e in log if any(
-            b["title"] == e["title"] and b["date"] == e["start"][:10]
-            for b in active_bookings
-        )]
+        synced = []
+        for e in log:
+            match = next((b for b in active_bookings if b["date"] == e["start"][:10]), None)
+            if match:
+                e["cancelled"] = match["cancelled"]
+                synced.append(e)
 
         with open("enroll_log.json", "w") as f:
             json.dump(synced, f, indent=2)
