@@ -70,6 +70,7 @@ def unenroll_class(title, date):
                 if title in row_text and date_display in row_text:
                     stornieren = row.find_element(By.XPATH, ".//a[contains(text(), 'Stornieren')]")
                     driver.execute_script("arguments[0].click();", stornieren)
+                    wait.until(EC.alert_is_present())
                     driver.switch_to.alert.accept()
                     logging.info(f"Unenrolled from {title} on {date}")
                     try:
@@ -81,7 +82,8 @@ def unenroll_class(title, date):
                     except Exception:
                         pass
                     return True
-            except Exception:
+            except Exception as row_err:
+                logging.error(f"Row error: {row_err}")
                 continue
         logging.error(f"Could not find booking for {title} on {date_display}")
         return False
