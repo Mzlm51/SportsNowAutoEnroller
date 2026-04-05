@@ -40,7 +40,7 @@ def get_requests_to_enroll():
     for r in requests:
         class_start = datetime.datetime.fromisoformat(r["start"])
         if class_start.tzinfo is not None:
-            class_start = class_start.replace(tzinfo=None)
+            class_start = class_start.astimezone().replace(tzinfo=None)
         if now <= class_start <= cutoff:
             to_enroll.append(r)
     return to_enroll
