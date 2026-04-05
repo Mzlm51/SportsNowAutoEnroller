@@ -49,6 +49,15 @@ def init():
 
 def login(driver, wait, email, password):
     logging.info("Logging in...")
+
+    # dismiss cookie banner if present
+    try:
+        cookie_btn = driver.find_element(By.XPATH, "//a[contains(@class, 'cc-btn cc-dismiss')]")
+        driver.execute_script("arguments[0].click();", cookie_btn)
+        logging.info("Dismissed cookie banner")
+    except Exception:
+        pass
+
     input_mail = driver.find_element(By.NAME, "user[email]")
     input_password = driver.find_element(By.NAME, "user[password]")
 
@@ -56,7 +65,7 @@ def login(driver, wait, email, password):
     input_password.send_keys(password)
 
     login_button = driver.find_element(By.NAME, "commit")
-    login_button.click()
+    driver.execute_script("arguments[0].click();", login_button)
     logging.info("Finished logging in")
 
 def scrapeWebsite(driver, wait):
