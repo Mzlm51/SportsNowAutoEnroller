@@ -63,6 +63,13 @@ def should_scrape_after_class():
     return False
 
 
+def get_unenroll_requests():
+    try:
+        with open("unenroll_requests.json") as f:
+            return json.load(f)
+    except (FileNotFoundError, ValueError):
+        return []
+
 def main():
     while True:
         if should_scrape_after_class() and autoscrape_enabled():
@@ -104,6 +111,22 @@ def main():
                 logging.info("No classes to enroll in the next 48 hours")
         else:
             logging.info("Scheduler disabled, sleeping...")
+
+        to_unenroll = get_unenroll_requests()
+        if to_unenroll:
+            logging.info(f"Found {len(to_unenroll)} unenroll requests")
+            for r in to_unenroll:
+                date = r["start"][:10]
+                result = subprocess.run([sys.executable, "unenroller.py", r["title"], date])
+                if result.returncode == 0:
+                    try:
+                        with open("unenroll_requests.json") as f:
+                            queue = json.load(f)
+                        queue = [x for x in queue if not (x["title"] == r["title"] and x["start"] == r["start"])]
+                        with open("unenroll_requests.json", "w") as f:
+                            json.dump(queue, f, indent=2)
+                    except Exception as e:
+                        logging.error(f"Error updating unenroll_requests.json: {e}")
 
         time.sleep(CHECK_INTERVAL)
 

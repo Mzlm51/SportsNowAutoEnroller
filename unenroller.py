@@ -99,7 +99,9 @@ def unenroll_class(title, date):
             except Exception as row_err:
                 logging.error(f"Row error: {row_err}")
                 continue
-        logging.error(f"Could not find booking for {title} on {date_display}")
+        logging.error(f"Could not find booking for {title} on {date_display} — cancellation deadline may have passed")
+        with open("unenroll_error.json", "w") as f:
+            json.dump({"error": f"Cancellation deadline may have passed for {title} on {date_display}. Please cancel directly on sportsnow."}, f)
         return False
     except Exception as e:
         logging.error(f"Error unenrolling: {e}")

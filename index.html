@@ -89,7 +89,7 @@ document.addEventListener("DOMContentLoaded", async function () {
 
       if (info.event.extendedProps.confirmed) {
         if (!confirm(`Unenroll from "${info.event.title.replace("✓ ", "")}"?`)) return;
-        fetch("/unenroll", {
+        fetch("/unenroll_requests", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -97,12 +97,12 @@ document.addEventListener("DOMContentLoaded", async function () {
             start: info.event.start.toISOString()
           })
         }).then(res => {
-          if (!res.ok) { alert("Error unenrolling"); return; }
+          if (!res.ok) { alert("Error queuing unenrollment"); return; }
           info.event.setProp("title", info.event.extendedProps.rawTitle);
           info.event.setProp("backgroundColor", "");
           info.event.setProp("borderColor", "");
           info.event.setExtendedProp("confirmed", false);
-          alert("Unenrolled!");
+          alert("Unenrollment queued — will be processed shortly.");
         });
         return;
       }

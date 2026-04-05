@@ -68,14 +68,30 @@ def enroll_requests():
 
         return jsonify({"status": "ok"})
 
-@app.route("/unenroll", methods=["POST"])
-def unenroll():
-    import subprocess, sys
-    data = request.json
-    title = data["title"]
-    date = data["start"][:10]
-    subprocess.Popen([sys.executable, "unenroller.py", title, date])
-    return jsonify({"status": "ok"})
+@app.route("/unenroll_requests", methods=["GET", "POST", "DELETE"])
+def unenroll_requests():
+    try:
+        with open("unenroll_requests.json") as f:
+            queue = json.load(f)
+    except (FileNotFoundError, ValueError):
+        queue = []
+
+    if request.method == "GET":
+        return jsonify(queue)
+
+    if request.method == "POST":
+        data = request.json
+        queue.append({"title": data["title"], "start": data["start"], "requested_at": datetime.now().isoformat()})
+        with open("unenroll_requests.json", "w") as f:
+            json.dump(queue, f, indent=2)
+        return jsonify({"status": "ok"})
+
+    if request.method == "DELETE":
+        data = request.json
+        queue = [r for r in queue if not (r["title"] == data["title"] and r["start"] == data["start"])]
+        with open("unenroll_requests.json", "w") as f:
+            json.dump(queue, f, indent=2)
+        return jsonify({"status": "ok"})
 
 @app.route("/enroll_log", methods=["GET"])
 def enroll_log():
