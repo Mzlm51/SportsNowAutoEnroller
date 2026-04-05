@@ -108,6 +108,20 @@ def main():
                                 json.dump(log, f, indent=2)
                         except Exception as e:
                             logging.error(f"Error updating enroll_log.json: {e}")
+                    elif result.returncode == 1:
+                        logging.info(f"Class cancelled — marking {r['title']} as cancelled")
+                        try:
+                            try:
+                                with open("cancelled_classes.json") as f:
+                                    cancelled = json.load(f)
+                            except (FileNotFoundError, ValueError):
+                                cancelled = []
+                            if not any(c["href"] == r["href"] and c["start"][:10] == r["start"][:10] for c in cancelled):
+                                cancelled.append({**r, "cancelled_at": datetime.datetime.now().isoformat()})
+                            with open("cancelled_classes.json", "w") as f:
+                                json.dump(cancelled, f, indent=2)
+                        except Exception as e:
+                            logging.error(f"Error updating cancelled_classes.json: {e}")
                     else:
                         logging.info(f"Skipping enroll_log update for {r['title']} — enroller did not succeed")
             else:

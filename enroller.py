@@ -74,13 +74,13 @@ def enroll_class(href):
         already_booked = driver.find_elements(By.XPATH, "//button[contains(@class, 'btn-primary') and contains(text(), 'Bereits gebucht')]")
         if already_booked:
             logging.info("Already booked — skipping.")
-            sys.exit(1)
+            sys.exit(2)
 
         waitlist = driver.find_elements(By.XPATH, "//a[contains(@class, 'add-to-waiting-list')]")
         if waitlist:
             driver.get(waitlist[0].get_attribute("href"))
             logging.info("Class full — added to waitlist.")
-            sys.exit(1)
+            sys.exit(2)
 
         driver.get(driver.find_element(By.XPATH, "//a[contains(@class, 'btn-sm') and contains(@class, 'btn-primary') and contains(@class, 'btn-block')]").get_attribute("href"))
         logging.info("section 2 complete")

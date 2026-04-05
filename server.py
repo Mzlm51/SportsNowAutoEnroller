@@ -35,6 +35,15 @@ def enroll_requests():
         data = request.json
         request_date = data["start"][:10]
 
+        class_start = datetime.fromisoformat(data["start"])
+        if class_start.tzinfo is not None:
+            from datetime import timezone
+            now = datetime.now(timezone.utc)
+        else:
+            now = datetime.now()
+        if class_start < now:
+            return jsonify({"status": "error", "message": "This class has already passed."}), 400
+
         if any(r["start"][:10] == request_date for r in requests_list):
             return jsonify({"status": "error", "message": f"Already scheduled on {request_date}!"}), 400
 
@@ -92,6 +101,14 @@ def unenroll_requests():
         with open("unenroll_requests.json", "w") as f:
             json.dump(queue, f, indent=2)
         return jsonify({"status": "ok"})
+
+@app.route("/cancelled_classes", methods=["GET"])
+def cancelled_classes():
+    try:
+        with open("cancelled_classes.json") as f:
+            return jsonify(json.load(f))
+    except (FileNotFoundError, ValueError):
+        return jsonify([])
 
 @app.route("/enroll_log", methods=["GET"])
 def enroll_log():
