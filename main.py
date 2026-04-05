@@ -50,11 +50,13 @@ def init():
 def login(driver, wait, email, password):
     logging.info("Logging in...")
 
-    # dismiss cookie banner if present
+    # hide cookie banner if present
     try:
-        cookie_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(@class, 'cc-dismiss')]")))
-        driver.execute_script("arguments[0].click();", cookie_btn)
-        logging.info("Dismissed cookie banner")
+        driver.execute_script("""
+            var el = document.querySelector('.cc-window');
+            if (el) el.style.display = 'none';
+        """)
+        logging.info("cookie banner hid")
     except Exception:
         pass
 
