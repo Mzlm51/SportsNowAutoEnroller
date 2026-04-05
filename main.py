@@ -178,14 +178,56 @@ def save_to_json(classMap):
 
     logging.info("Saved classes to classes.json")
 
+def sync_enroll_log(driver, wait):
+    logging.info("Syncing enroll log with Meine Stunden...")
+    try:
+        driver.get("https://www.sportsnow.ch/de/bookings")
+        wait.until(EC.presence_of_element_located((By.CLASS_NAME, "footable-even")))
+
+        active_bookings = []
+        rows = driver.find_elements(By.XPATH, "//tr[contains(@class, 'footable')]")
+        for row in rows:
+            try:
+                cells = row.find_elements(By.TAG_NAME, "td")
+                if len(cells) < 4:
+                    continue
+                date_text = cells[1].text.strip()
+                title_text = cells[3].text.strip()
+                if date_text and title_text:
+                    date_parts = date_text.split(".")
+                    if len(date_parts) == 3:
+                        iso_date = f"{date_parts[2]}-{date_parts[1]}-{date_parts[0]}"
+                        active_bookings.append({"title": title_text, "date": iso_date})
+            except Exception:
+                continue
+
+        try:
+            with open("enroll_log.json") as f:
+                log = json.load(f)
+        except (FileNotFoundError, ValueError):
+            log = []
+
+        synced = [e for e in log if any(
+            b["title"] == e["title"] and b["date"] == e["start"][:10]
+            for b in active_bookings
+        )]
+
+        with open("enroll_log.json", "w") as f:
+            json.dump(synced, f, indent=2)
+
+        logging.info(f"Enroll log synced: {len(synced)} active bookings")
+    except Exception as e:
+        logging.error(f"Error syncing enroll log: {e}")
+
 def main():
     wait, driver = init()
 
     try:
-        driver.get("https://www.sportsnow.ch/users/sign_in")  
+        driver.get("https://www.sportsnow.ch/users/sign_in")
         login(driver, wait, EMAIL, PASSWORD)
         classMap = scrapeWebsite(driver, wait)
         save_to_json(classMap)
+        sync_enroll_log(driver, wait)
         logging.info("Finished scraping the website")
     except Exception as e:
         logging.error(f"An error occurred: {e}")
