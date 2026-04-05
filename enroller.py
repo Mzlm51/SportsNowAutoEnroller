@@ -62,20 +62,20 @@ def enroll_class(href):
         logging.info(f"Enrolling into {href}")
         driver.get(href)
 
-        #driver.get(driver.find_element(By.XPATH, "//div[@class='col-xs-12 col-md-6 col-sm-6 col-lg-4']/a").get_attribute("href"))
         driver.get(driver.find_element(By.XPATH, "//a[contains(text(), 'Jetzt buchen')]").get_attribute("href"))
         logging.info("section 1 complete")
 
-        # Wait for page to load, then check state before navigating
         wait.until(EC.presence_of_element_located((By.XPATH, "//td[contains(@class, 'footable-last-column')]")))
 
-        # Check if already booked
+        if driver.find_elements(By.XPATH, "//strong[contains(@class, 'color-red')]"):
+            logging.info("Class is cancelled — skipping.")
+            return
+
         already_booked = driver.find_elements(By.XPATH, "//button[contains(@class, 'btn-primary') and contains(text(), 'Bereits gebucht')]")
         if already_booked:
             logging.info("Already booked — skipping.")
             return
 
-        # Check if full (waitlist available)
         waitlist = driver.find_elements(By.XPATH, "//a[contains(@class, 'add-to-waiting-list')]")
         if waitlist:
             driver.get(waitlist[0].get_attribute("href"))

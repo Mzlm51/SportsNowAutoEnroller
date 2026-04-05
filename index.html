@@ -41,22 +41,18 @@ async function loadClasses() {
 
   return classes.map(cls => {
     const isPending = enrollments.some(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
-    const logEntry = log.find(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
-    const isConfirmed = !!logEntry;
-    const isCancelled = logEntry && logEntry.cancelled;
+    const isConfirmed = log.some(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
 
-    const color = isCancelled ? "red" : isConfirmed ? "green" : isPending ? "orange" : "";
-    const prefix = isCancelled ? "✗ " : isConfirmed ? "✓ " : "";
+    const color = isConfirmed ? "green" : isPending ? "orange" : "";
 
     return {
-      title: prefix + cls.class_title,
+      title: isConfirmed ? "✓ " + cls.class_title : cls.class_title,
       start: cls.start,
       end: cls.end,
       extendedProps: {
         href: cls.href,
         day: cls.day,
         confirmed: isConfirmed,
-        cancelled: isCancelled,
         rawTitle: cls.class_title
       },
       backgroundColor: color,
@@ -81,11 +77,6 @@ document.addEventListener("DOMContentLoaded", async function () {
 
     eventClick: function(info) {
       info.jsEvent.preventDefault();
-
-      if (info.event.extendedProps.cancelled) {
-        alert("This class has been cancelled.");
-        return;
-      }
 
       if (info.event.extendedProps.confirmed) {
         if (!confirm(`Unenroll from "${info.event.title.replace("✓ ", "")}"?`)) return;
