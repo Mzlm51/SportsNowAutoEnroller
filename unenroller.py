@@ -69,9 +69,23 @@ def unenroll_class(title, date):
                 row_text = " ".join(c.text for c in cells)
                 if title in row_text and date_display in row_text:
                     stornieren = row.find_element(By.XPATH, ".//a[contains(text(), 'Stornieren')]")
-                    stornieren.click()
-                    wait.until(EC.alert_is_present())
-                    driver.switch_to.alert.accept()
+                    delete_url = stornieren.get_attribute("href")
+                    driver.execute_script("""
+                        var form = document.createElement('form');
+                        form.method = 'post';
+                        form.action = arguments[0];
+                        var m = document.createElement('input');
+                        m.type = 'hidden'; m.name = '_method'; m.value = 'delete';
+                        form.appendChild(m);
+                        var t = document.createElement('input');
+                        t.type = 'hidden'; t.name = 'authenticity_token';
+                        t.value = document.querySelector('meta[name=csrf-token]').content;
+                        form.appendChild(t);
+                        document.body.appendChild(form);
+                        form.submit();
+                    """, delete_url)
+                    import time
+                    time.sleep(3)
                     logging.info(f"Unenrolled from {title} on {date}")
                     try:
                         with open("enroll_log.json") as f:
