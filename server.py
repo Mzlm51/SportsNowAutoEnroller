@@ -35,12 +35,9 @@ def enroll_requests():
         data = request.json
         request_date = data["start"][:10]
 
-        class_start = datetime.fromisoformat(data["start"])
-        if class_start.tzinfo is not None:
-            from datetime import timezone
-            now = datetime.now(timezone.utc)
-        else:
-            now = datetime.now()
+        from datetime import timezone
+        class_start = datetime.fromisoformat(data["start"].replace("Z", "+00:00"))
+        now = datetime.now(timezone.utc) if class_start.tzinfo is not None else datetime.now()
         if class_start < now:
             return jsonify({"status": "error", "message": "This class has already passed."}), 400
 

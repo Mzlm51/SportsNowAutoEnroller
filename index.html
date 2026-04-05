@@ -88,6 +88,11 @@ document.addEventListener("DOMContentLoaded", async function () {
         return;
       }
 
+      if (info.event.start < new Date()) {
+        alert("This class has already passed.");
+        return;
+      }
+
       if (info.event.extendedProps.confirmed) {
         if (!confirm(`Unenroll from "${info.event.title.replace("✓ ", "")}"?`)) return;
         fetch("/unenroll_requests", {
