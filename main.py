@@ -52,13 +52,13 @@ def login(driver, wait, email, password):
 
     # dismiss cookie banner if present
     try:
-        cookie_btn = driver.find_element(By.XPATH, "//a[contains(@class, 'cc-btn cc-dismiss')]")
+        cookie_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(@class, 'cc-dismiss')]")))
         driver.execute_script("arguments[0].click();", cookie_btn)
         logging.info("Dismissed cookie banner")
     except Exception:
         pass
 
-    input_mail = driver.find_element(By.NAME, "user[email]")
+    input_mail = wait.until(EC.presence_of_element_located((By.NAME, "user[email]")))
     input_password = driver.find_element(By.NAME, "user[password]")
 
     input_mail.send_keys(email)
