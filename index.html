@@ -39,8 +39,7 @@ async function loadClasses() {
   const resLog = await fetch("/enroll_log");
   const log = await resLog.json();
 
-  const resCancelled = await fetch("/cancelled_classes");
-  const cancelled = await resCancelled.json();
+  const cancelled = await fetch("/cancelled_classes").then(r => r.json()).catch(() => []);
 
   return classes.map(cls => {
     const isPending = enrollments.some(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
