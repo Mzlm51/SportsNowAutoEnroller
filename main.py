@@ -77,7 +77,6 @@ def login(driver, wait, email, password):
 def scrapeWebsite(driver, wait):
     logging.info("Scraping website...")
 
-    wait.until(EC.url_contains("sportsnow.ch"))
     wait.until(
         EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Meine Studios')]"))
     ).click()
