@@ -71,8 +71,14 @@ def scheduler_status():
 
     elif request.method == "POST":
         data = request.json
+        try:
+            with open(SCHEDULER_FILE) as f:
+                current = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            current = {"enabled": False, "autoscrape_enabled": False}
+        current.update({k: v for k, v in data.items() if k in ("enabled", "autoscrape_enabled")})
         with open(SCHEDULER_FILE, "w") as f:
-            json.dump({"enabled": data.get("enabled", False)}, f)
+            json.dump(current, f)
         return jsonify({"status": "ok"})
 
 if __name__ == "__main__":

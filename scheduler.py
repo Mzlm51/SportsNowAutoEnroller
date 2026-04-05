@@ -20,6 +20,14 @@ def scheduler_enabled():
     except FileNotFoundError:
         return False
 
+def autoscrape_enabled():
+    try:
+        with open("scheduler_status.json") as f:
+            status = json.load(f)
+            return status.get("autoscrape_enabled", False)
+    except FileNotFoundError:
+        return False
+
 def get_requests_to_enroll():
     now = datetime.datetime.now()
     cutoff = now + datetime.timedelta(hours=HOURS_AHEAD)
@@ -60,7 +68,7 @@ def main():
     while True:
         now = datetime.datetime.now()
 
-        if should_run_daily_scrape():
+        if should_run_daily_scrape() and autoscrape_enabled():
             logging.info("Initializing webscrape")
             try:
                 subprocess.run([sys.executable, "main.py"], check=True)
