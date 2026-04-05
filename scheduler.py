@@ -7,9 +7,7 @@ ENROLL_FILE = "enroll_requests.json"
 CHECK_INTERVAL = 5  # every minute
 HOURS_AHEAD = 48
 
-SCRAPE_HOUR = 18 # when to scrape new batch of classes
-SCRAPE_MINUTE = 42
-last_scrape_date = None
+scraped_class_keys = set()  # tracks which class start times have already triggered a scrape
 
 
 def scheduler_enabled():
@@ -47,28 +45,28 @@ def get_requests_to_enroll():
             to_enroll.append(r)
     return to_enroll
 
-def should_run_daily_scrape():
-    global last_scrape_date
+def should_scrape_after_class():
     now = datetime.datetime.now()
+    try:
+        with open("classes.json") as f:
+            classes = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return False
 
-    if (
-        now.hour == SCRAPE_HOUR and
-        now.minute == SCRAPE_MINUTE and
-        last_scrape_date != now.date()
-    ):
-            last_scrape_date = now.date()
+    for cls in classes:
+        start = datetime.datetime.fromisoformat(cls["start"])
+        key = cls["start"]
+        # scrape once, within 2 minutes after class starts
+        if start <= now <= start + datetime.timedelta(minutes=2) and key not in scraped_class_keys:
+            scraped_class_keys.add(key)
             return True
 
     return False
 
 
 def main():
-    global last_scrape_date
-
     while True:
-        now = datetime.datetime.now()
-
-        if should_run_daily_scrape() and autoscrape_enabled():
+        if should_scrape_after_class() and autoscrape_enabled():
             logging.info("Initializing webscrape")
             try:
                 subprocess.run([sys.executable, "main.py"], check=True)
