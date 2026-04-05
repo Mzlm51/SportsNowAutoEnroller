@@ -77,21 +77,18 @@ def login(driver, wait, email, password):
 def scrapeWebsite(driver, wait):
     logging.info("Scraping website...")
 
-    wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Meine Studios')]"))
-    ).click()
+    el = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[contains(@title, 'Meine Studios')]")))
+    driver.execute_script("arguments[0].click();", el)
 
     logging.info("Clicked 'Meine Studios'")
 
-    wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//a[@href='https://www.sportsnow.ch/go/natthapong-gym?locale=de']"))
-    ).click()
+    el = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[@href='https://www.sportsnow.ch/go/natthapong-gym?locale=de']")))
+    driver.execute_script("arguments[0].click();", el)
 
     logging.info("Clicked Anschauen")
 
-    wait.until(
-        EC.element_to_be_clickable((By.XPATH, "//a[text()='Stundenplan']"))
-    ).click()
+    el = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[text()='Stundenplan']")))
+    driver.execute_script("arguments[0].click();", el)
 
     logging.info("Clicked Stundenplan")
 
