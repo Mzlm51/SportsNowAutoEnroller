@@ -100,7 +100,8 @@ def enroll_class(href):
         driver.execute_script("arguments[0].scrollIntoView();", verbindlich_buchen)
         driver.execute_script("arguments[0].click();", verbindlich_buchen)
 
-        wait.until(EC.url_changes(driver.current_url))
+        import time
+        time.sleep(3)
 
         logging.info("Enrolled in the course!")
         logging.info("Enrollment done!")
