@@ -68,6 +68,26 @@ def enroll_requests():
 
         return jsonify({"status": "ok"})
 
+@app.route("/unenroll", methods=["POST"])
+def unenroll():
+    import subprocess, sys
+    data = request.json
+    title = data["title"]
+    date = data["start"][:10]
+
+    try:
+        with open("enroll_log.json") as f:
+            log = json.load(f)
+    except (FileNotFoundError, ValueError):
+        log = []
+
+    log = [e for e in log if not (e["title"] == title and e["start"][:10] == date)]
+    with open("enroll_log.json", "w") as f:
+        json.dump(log, f, indent=2)
+
+    subprocess.Popen([sys.executable, "unenroller.py", title, date])
+    return jsonify({"status": "ok"})
+
 @app.route("/enroll_log", methods=["GET"])
 def enroll_log():
     try:

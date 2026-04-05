@@ -50,7 +50,8 @@ async function loadClasses() {
       extendedProps: {
         href: cls.href,
         day: cls.day,
-        confirmed: isConfirmed
+        confirmed: isConfirmed,
+        rawTitle: cls.class_title
       },
       backgroundColor: isConfirmed ? "green" : isPending ? "orange" : "",
       borderColor: isConfirmed ? "green" : isPending ? "orange" : ""
@@ -76,7 +77,22 @@ document.addEventListener("DOMContentLoaded", async function () {
       info.jsEvent.preventDefault();
 
       if (info.event.extendedProps.confirmed) {
-        alert("You are already enrolled in this class!");
+        if (!confirm(`Unenroll from "${info.event.title.replace("✓ ", "")}"?`)) return;
+        fetch("/unenroll", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: info.event.extendedProps.rawTitle,
+            start: info.event.start.toISOString()
+          })
+        }).then(res => {
+          if (!res.ok) { alert("Error unenrolling"); return; }
+          info.event.setProp("title", info.event.extendedProps.rawTitle);
+          info.event.setProp("backgroundColor", "");
+          info.event.setProp("borderColor", "");
+          info.event.setExtendedProp("confirmed", false);
+          alert("Unenrolled!");
+        });
         return;
       }
 
