@@ -52,7 +52,8 @@ async function loadClasses() {
         day: cls.day,
         confirmed: isConfirmed
       },
-      backgroundColor: isConfirmed ? "green" : isPending ? "orange" : ""
+      backgroundColor: isConfirmed ? "green" : isPending ? "orange" : "",
+      borderColor: isConfirmed ? "green" : isPending ? "orange" : ""
     };
   });
 }
@@ -97,6 +98,7 @@ document.addEventListener("DOMContentLoaded", async function () {
             return;
           }
           info.event.setProp("backgroundColor", "");
+          info.event.setProp("borderColor", "");
           alert("Enrollment removed!");
         }).catch(err => {
           console.error(err);
@@ -121,7 +123,8 @@ document.addEventListener("DOMContentLoaded", async function () {
             alert(errorData.message);
             return;
           }
-          info.event.setProp("backgroundColor", "green");
+          info.event.setProp("backgroundColor", "orange");
+          info.event.setProp("borderColor", "orange");
           alert("Enrollment scheduled!");
         }).catch(err => {
           console.error(err);
