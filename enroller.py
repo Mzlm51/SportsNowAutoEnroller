@@ -13,21 +13,40 @@ PASSWORD = os.getenv("PASSWORD")
 logging.basicConfig(level=logging.INFO)
 
 def init_driver():
-    driver = webdriver.Chrome()
+    from selenium.webdriver.chrome.service import Service
+    options = webdriver.ChromeOptions()
+    options.add_argument("--headless")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-zygote")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--window-size=1920,1080")
+    options.binary_location = "/usr/bin/chromium"
+    service = Service("/usr/bin/chromedriver")
+    driver = webdriver.Chrome(service=service, options=options)
     wait = WebDriverWait(driver, 10)
-    driver.maximize_window()
     return wait, driver
 
 def login(driver, wait, email, password):
     logging.info("Logging in...")
-    input_mail = driver.find_element(By.NAME, "user[email]")
+
+    try:
+        driver.execute_script("""
+            var el = document.querySelector('.cc-window');
+            if (el) el.style.display = 'none';
+        """)
+    except Exception:
+        pass
+
+    input_mail = wait.until(EC.presence_of_element_located((By.NAME, "user[email]")))
     input_password = driver.find_element(By.NAME, "user[password]")
 
     input_mail.send_keys(EMAIL)
     input_password.send_keys(PASSWORD)
 
     login_button = driver.find_element(By.NAME, "commit")
-    login_button.click()
+    driver.execute_script("arguments[0].click();", login_button)
     logging.info("Finished logging in")
 
 def enroll_class(href):
