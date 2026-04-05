@@ -3,7 +3,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from dotenv import load_dotenv
-import os, logging, sys
+import os, logging, sys, json
 
 load_dotenv()
 EMAIL = os.getenv("EMAIL")
@@ -49,6 +49,9 @@ def login(driver, wait):
     logging.info("Finished logging in")
 
 def unenroll_class(title, date):
+    parts = date.split("-")
+    date_display = f"{parts[2]}.{parts[1]}.{parts[0]}"
+
     wait, driver = init_driver()
     try:
         driver.get("https://www.sportsnow.ch/users/sign_in")
@@ -64,15 +67,23 @@ def unenroll_class(title, date):
             try:
                 cells = row.find_elements(By.TAG_NAME, "td")
                 row_text = " ".join(c.text for c in cells)
-                if title in row_text and date in row_text:
+                if title in row_text and date_display in row_text:
                     stornieren = row.find_element(By.XPATH, ".//a[contains(text(), 'Stornieren')]")
                     driver.execute_script("arguments[0].click();", stornieren)
                     driver.switch_to.alert.accept()
                     logging.info(f"Unenrolled from {title} on {date}")
+                    try:
+                        with open("enroll_log.json") as f:
+                            log = json.load(f)
+                        log = [e for e in log if not (e["title"] == title and e["start"][:10] == date)]
+                        with open("enroll_log.json", "w") as f:
+                            json.dump(log, f, indent=2)
+                    except Exception:
+                        pass
                     return True
             except Exception:
                 continue
-        logging.error(f"Could not find booking for {title} on {date}")
+        logging.error(f"Could not find booking for {title} on {date_display}")
         return False
     except Exception as e:
         logging.error(f"Error unenrolling: {e}")
