@@ -69,7 +69,7 @@ def unenroll_class(title, date):
                 row_text = " ".join(c.text for c in cells)
                 if title in row_text and date_display in row_text:
                     stornieren = row.find_element(By.XPATH, ".//a[contains(text(), 'Stornieren')]")
-                    driver.execute_script("arguments[0].click();", stornieren)
+                    stornieren.click()
                     wait.until(EC.alert_is_present())
                     driver.switch_to.alert.accept()
                     logging.info(f"Unenrolled from {title} on {date}")
