@@ -36,20 +36,23 @@ async function loadClasses() {
   const resEnroll = await fetch("/enroll_requests");
   const enrollments = await resEnroll.json();
 
+  const resLog = await fetch("/enroll_log");
+  const log = await resLog.json();
+
   return classes.map(cls => {
-    const isEnrolled = enrollments.some(
-      e => e.day === cls.day && e.href === cls.href
-    );
+    const isPending = enrollments.some(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
+    const isConfirmed = log.some(e => e.href === cls.href && e.start.slice(0,10) === cls.start.slice(0,10));
 
     return {
-      title: cls.class_title,
+      title: isConfirmed ? "✓ " + cls.class_title : cls.class_title,
       start: cls.start,
       end: cls.end,
       extendedProps: {
         href: cls.href,
-        day: cls.day
+        day: cls.day,
+        confirmed: isConfirmed
       },
-      backgroundColor: isEnrolled ? "green" : ""
+      backgroundColor: isConfirmed ? "green" : isPending ? "orange" : ""
     };
   });
 }
@@ -71,7 +74,12 @@ document.addEventListener("DOMContentLoaded", async function () {
     eventClick: function(info) {
       info.jsEvent.preventDefault();
 
-      const isEnrolled = info.event.backgroundColor === "green";
+      if (info.event.extendedProps.confirmed) {
+        alert("You are already enrolled in this class!");
+        return;
+      }
+
+      const isEnrolled = info.event.backgroundColor === "orange";
 
       if (isEnrolled) {
         if (!confirm(`Unenroll from "${info.event.title}"?`)) return;

@@ -33,9 +33,18 @@ def enroll_requests():
 
     if request.method == "POST":
         data = request.json
+        request_date = data["start"][:10]
 
-        if any(r["day"] == data["day"] for r in requests_list):
-            return jsonify({"status": "error", "message": f"Already enrolled on {data['day']}!"}), 400
+        if any(r["start"][:10] == request_date for r in requests_list):
+            return jsonify({"status": "error", "message": f"Already scheduled on {request_date}!"}), 400
+
+        try:
+            with open("enroll_log.json") as f:
+                log = json.load(f)
+        except (FileNotFoundError, ValueError):
+            log = []
+        if any(l["start"][:10] == request_date for l in log):
+            return jsonify({"status": "error", "message": f"Already enrolled on {request_date}!"}), 400
 
         requests_list.append({
             "title": data["title"],
@@ -58,6 +67,14 @@ def enroll_requests():
             json.dump(requests_list, f, indent=2)
 
         return jsonify({"status": "ok"})
+
+@app.route("/enroll_log", methods=["GET"])
+def enroll_log():
+    try:
+        with open("enroll_log.json") as f:
+            return jsonify(json.load(f))
+    except (FileNotFoundError, ValueError):
+        return jsonify([])
 
 @app.route("/scheduler_status", methods=["GET", "POST"])
 def scheduler_status():

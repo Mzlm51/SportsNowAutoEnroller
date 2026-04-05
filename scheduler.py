@@ -4,10 +4,10 @@ import sys
 logging.basicConfig(level=logging.INFO)
 
 ENROLL_FILE = "enroll_requests.json"
-CHECK_INTERVAL = 5  # every minute
+CHECK_INTERVAL = 5
 HOURS_AHEAD = 48
 
-scraped_class_keys = set()  # tracks which class start times have already triggered a scrape
+scraped_class_keys = set()
 
 
 def scheduler_enabled():
@@ -56,7 +56,6 @@ def should_scrape_after_class():
     for cls in classes:
         start = datetime.datetime.fromisoformat(cls["start"])
         key = cls["start"]
-        # scrape once, within 2 minutes after class starts
         if start <= now <= start + datetime.timedelta(minutes=2) and key not in scraped_class_keys:
             scraped_class_keys.add(key)
             return True
@@ -81,7 +80,6 @@ def main():
                     subprocess.run([sys.executable, "enroller.py", r["href"]])
                     logging.info(f'Enrolled into {r["title"], r["day"]}')
 
-                    #remove request from json after enrolling
                     try:
                         with open(ENROLL_FILE) as f:
                             requests = json.load(f)
@@ -90,6 +88,18 @@ def main():
                             json.dump(requests, f, indent=2)
                     except Exception as e:
                         logging.error(f"Error updating enroll_requests.json: {e}")
+
+                    try:
+                        try:
+                            with open("enroll_log.json") as f:
+                                log = json.load(f)
+                        except (FileNotFoundError, ValueError):
+                            log = []
+                        log.append({**r, "enrolled_at": datetime.datetime.now().isoformat()})
+                        with open("enroll_log.json", "w") as f:
+                            json.dump(log, f, indent=2)
+                    except Exception as e:
+                        logging.error(f"Error updating enroll_log.json: {e}")
             else:
                 logging.info("No classes to enroll in the next 48 hours")
         else:
