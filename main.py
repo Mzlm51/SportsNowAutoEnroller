@@ -106,23 +106,19 @@ def scrapeWebsite(driver, wait):
                 By.XPATH, "//div[contains(@class, 'col-xs-1 cal-entry-col') and contains(@class, 'cal-col-')]/div[contains(@class, 'cal-entry') and not(contains(.,'Probetraining'))]")
 
             for block in classes:
-                # get day
                 parent_class = block.find_element(By.XPATH, "..").get_attribute("class")
                 numbers = re.findall(r'\d+', parent_class)
                 number = int(numbers[1])
                 day = day_map[number]
 
-                # get time
-                time_element = block.find_element(By.XPATH, ".//p[.//i[contains(@class, 'fa-clock-o')]]")
-                time_text = time_element.text.strip()
+                block_text = block.get_attribute("textContent")
+                time_match = re.search(r'\d{2}:\d{2} - \d{2}:\d{2}', block_text)
+                time_text = time_match.group(0) if time_match else ""
                 if time_text not in times:
                     times.append(time_text)
 
-                # get name
-                class_title_element = block.find_element(By.XPATH, ".//h4/a/span")
-                class_title = class_title_element.text.strip()
+                class_title = block.get_attribute("data-service-session-name")
 
-                # get href
                 href = block.find_element(By.XPATH, ".//a").get_attribute("href")
                 classMap[(day, time_text, class_title)] = href
 
@@ -148,6 +144,8 @@ def save_to_json(classMap):
     today = datetime.date.today()
 
     for (day, time_range, title), href in classMap.items():
+        if not time_range or " - " not in time_range or not title:
+            continue
         start_time, end_time = time_range.split(" - ")
 
         # find next date for this weekday
