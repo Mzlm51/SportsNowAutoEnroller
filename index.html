@@ -15,6 +15,8 @@
   <label>
     <input type="checkbox" id="scraperToggle" /> Enable auto-scraping
   </label>
+  <button id="scrapeNowBtn" style="margin-left:16px; padding:4px 12px; cursor:pointer;">🔄 Scrape Now</button>
+  <span id="scrapeStatus" style="margin-left:8px; font-size:0.85em; color:gray;"></span>
 </div>
 <div id="calendar"></div>
 <style>
@@ -180,18 +182,7 @@ fetch("/scheduler_status")
     toggle.checked = data.enabled;
     scraperToggle.checked = data.autoscrape_enabled;
   });
-/*
-  function updateToggles() {
-  fetch("/scheduler_status", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      schedulerEnabled: schedulerToggle.checked,
-      scraperEnabled: scraperToggle.checked
-    })
-  });
-}
-*/
+
 toggle.addEventListener("change", () => {
   fetch("/scheduler_status", {
     method: "POST",
@@ -206,6 +197,17 @@ scraperToggle.addEventListener("change", () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ autoscrape_enabled: scraperToggle.checked })
   });
+});
+
+document.getElementById("scrapeNowBtn").addEventListener("click", () => {
+  const status = document.getElementById("scrapeStatus");
+  status.textContent = "Scraping...";
+  fetch("/scrape", { method: "POST" })
+    .then(() => {
+      status.textContent = "✓ Started — refresh in ~30s";
+      setTimeout(() => { status.textContent = ""; }, 15000);
+    })
+    .catch(() => { status.textContent = "Error"; });
 });
 </script>
 

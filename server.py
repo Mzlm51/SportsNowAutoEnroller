@@ -115,6 +115,14 @@ def enroll_log():
     except (FileNotFoundError, ValueError):
         return jsonify([])
 
+@app.route("/scrape", methods=["POST"])
+def scrape():
+    import subprocess, sys, threading
+    def run():
+        subprocess.run([sys.executable, "main.py"])
+    threading.Thread(target=run, daemon=True).start()
+    return jsonify({"status": "started"})
+
 @app.route("/scheduler_status", methods=["GET", "POST"])
 def scheduler_status():
     if request.method == "GET":

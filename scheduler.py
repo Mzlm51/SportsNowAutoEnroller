@@ -6,8 +6,10 @@ logging.basicConfig(level=logging.INFO)
 ENROLL_FILE = "enroll_requests.json"
 CHECK_INTERVAL = 5
 HOURS_AHEAD = 48
+SCRAPE_INTERVAL_HOURS = 24
 
 scraped_class_keys = set()
+last_scrape = None
 
 
 def scheduler_enabled():
@@ -62,6 +64,14 @@ def should_scrape_after_class():
 
     return False
 
+def run_scrape():
+    global last_scrape
+    logging.info("Initializing webscrape")
+    try:
+        subprocess.run([sys.executable, "main.py"], check=True)
+        last_scrape = datetime.datetime.now()
+    except Exception as e:
+        logging.info("Scrape failed")
 
 def get_unenroll_requests():
     try:
@@ -71,13 +81,18 @@ def get_unenroll_requests():
         return []
 
 def main():
+    global last_scrape
+
+    run_scrape()
+
     while True:
+        now = datetime.datetime.now()
+
+        if last_scrape is None or (now - last_scrape).total_seconds() >= SCRAPE_INTERVAL_HOURS * 3600:
+            run_scrape()
+
         if should_scrape_after_class() and autoscrape_enabled():
-            logging.info("Initializing webscrape")
-            try:
-                subprocess.run([sys.executable, "main.py"], check=True)
-            except Exception as e:
-                logging.info("Scrape failed")
+            run_scrape()
 
         if scheduler_enabled():
             to_enroll = get_requests_to_enroll()
